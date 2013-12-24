@@ -1,0 +1,11 @@
+{
+   "name": "Build Status",
+   "className": "Rally.apps.buildstatus.BuildStatusApp",
+   "server": "http://localhost:7001",
+   "sdk": "x",
+   "javascript": [
+      "BuildStatusViewController.js",
+      "BuildStatusApp.js"
+   ],
+   "css": []
+}
