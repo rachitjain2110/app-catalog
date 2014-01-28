@@ -25,7 +25,8 @@
             'Rally.ui.filter.view.OwnerFilter',
             'Rally.ui.filter.view.TagFilter',
             'Rally.app.Message',
-            'Rally.apps.iterationtrackingboard.IsLeafHelper'
+            'Rally.apps.iterationtrackingboard.IsLeafHelper',
+            'Rally.ui.grid.plugin.RealtimeUpdateListener'
         ],
         mixins: ['Rally.app.CardFieldSelectable'],
         componentCls: 'iterationtrackingboard',
@@ -131,8 +132,40 @@
 
         _addGrid: function(gridConfig){
             var context = this.getContext();
+            var plugins = null;
 
-            this.gridboard = this.add({
+            var columnPlugins = [{
+                ptype: 'rallycolumnpolicy',
+                app: this
+            }];
+
+            if (true) {
+                plugins = ['rallyrealtimeupdatelistener'];
+                gridConfig.plugins = gridConfig.plugins ? gridConfig.plugins.concat(plugins) : plugins;
+                gridConfig.realtimeFilterFn = this._filterRealtimeUpdate;
+
+                columnPlugins = columnPlugins.concat(plugins);
+            }
+
+            var cardboardCfg = {
+                serverSideFiltering: context.isFeatureEnabled('F4359_FILTER'),
+                    columnConfig: {
+                        realtimeFilterFn: this._filterRealtimeUpdate,
+                        additionalFetchFields: ['PortfolioItem'],
+                        plugins: columnPlugins
+                },
+                cardConfig: {
+                    fields: this.getCardFieldNames(),
+                        showAge: this.getSetting('showCardAge') ? this.getSetting('cardAgeThreshold') : -1,
+                        showBlockedReason: true
+                },
+                listeners: {
+                    filter: this._onBoardFilter,
+                        filtercomplete: this._onBoardFilterComplete
+                }
+            };
+
+            var gridboardCfg = {
                 itemId: 'gridBoard',
                 xtype: 'rallygridboard',
                 stateId: 'iterationtracking-gridboard',
@@ -140,25 +173,7 @@
                 plugins: this.plugins,
                 modelNames: this.modelNames,
                 allModelNames: context.isFeatureEnabled('F2903_USE_ITERATION_TREE_GRID') ? this.allModelNames : null,
-                cardBoardConfig: {
-                    serverSideFiltering: context.isFeatureEnabled('F4359_FILTER'),
-                    columnConfig: {
-                        additionalFetchFields: ['PortfolioItem'],
-                        plugins: [{
-                            ptype: 'rallycolumnpolicy',
-                            app: this
-                        }]
-                    },
-                    cardConfig: {
-                        fields: this.getCardFieldNames(),
-                        showAge: this.getSetting('showCardAge') ? this.getSetting('cardAgeThreshold') : -1,
-                        showBlockedReason: true
-                    },
-                    listeners: {
-                        filter: this._onBoardFilter,
-                        filtercomplete: this._onBoardFilterComplete
-                    }
-                },
+                cardBoardConfig: cardboardCfg,
                 gridConfig: gridConfig,
                 addNewPluginConfig: {
                     style: {
@@ -172,7 +187,9 @@
                     recordcreate: this._publishContentUpdatedNoDashboardLayout,
                     scope: this
                 }
-            });
+            };
+
+            this.gridboard = this.add(gridboardCfg);
         },
 
         _getGridConfig: function(treeGridModel, columns) {
@@ -283,6 +300,10 @@
 
         _publishContentUpdatedNoDashboardLayout: function() {
             this.fireEvent('contentupdated', {dashboardLayout: false});
+        },
+
+        _filterRealtimeUpdate: function(records, changes) {
+            return true;
         }
     });
 })();
